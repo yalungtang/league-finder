@@ -2,6 +2,8 @@
 
 League Finder is a focused Vue 3 SPA for finding, filtering, and visually identifying sports competitions. Production contains no hardcoded league catalogue. League-specific content and imagery come from TheSportsDB at runtime; the generic catalogue illustration was generated with ChatGPT Image and is documented in `AI_USAGE.md`.
 
+**Live demo:** [league-finder-six.vercel.app](https://league-finder-six.vercel.app)
+
 ## Requirements and setup
 
 - Node.js 20.19+ or 22.12+
@@ -25,15 +27,25 @@ A premium V1 key can replace `3` without code changes. Every `VITE_` variable is
 
 ## Commands
 
-| Command                     | Purpose                                  |
-| --------------------------- | ---------------------------------------- |
-| `npm run dev`               | Start Vite                               |
-| `npm run build`             | Type-check and create `dist/`            |
-| `npm run test`              | Run Vitest                               |
-| `npm run typecheck`         | Run strict Vue/TypeScript checking       |
-| `npm run lint`              | Run ESLint with zero warnings            |
-| `npm run format`            | Format with Prettier                     |
+| Command                | Purpose                            |
+| ---------------------- | ---------------------------------- |
+| `npm run dev`          | Start Vite                         |
+| `npm run build`        | Type-check and create `dist/`      |
+| `npm run test`         | Run Vitest                         |
+| `npm run typecheck`    | Run strict Vue/TypeScript checking |
+| `npm run lint`         | Run ESLint with zero warnings      |
+| `npm run format`       | Format with Prettier               |
 | `npm run format:check` | Verify formatting                  |
+
+## Deployment
+
+The production site is deployed on Vercel and connected to this GitHub repository. Pushes to `main` trigger production deployments. `vercel.json` rewrites application routes to `index.html`, allowing direct visits to league detail URLs such as `/leagues/<idLeague>`.
+
+To create a production deployment manually:
+
+```bash
+vercel --prod
+```
 
 ## API and enrichment
 
