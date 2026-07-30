@@ -77,4 +77,4 @@ Desktop uses a fixed 520px catalogue sidebar and a fluid detail panel. Mobile op
 
 The free API can be slow, rate-limited, unavailable, CORS-restricted, or sparse. Remote images can fail independently. The UI includes catalogue retry, partial detail success, badge-unavailable, CSS-only fanart fallback, and omission of missing metadata. Private premium-key production should use a monitored server-side proxy and explicit cache policy.
 
-See [the PRD](docs/PRD.md) and [AI usage disclosure](AI_USAGE.md).
+See the [AI usage disclosure](AI_USAGE.md).
