@@ -1,34 +1,29 @@
-import { computed, onMounted, ref } from 'vue'
-import { fetchAllLeagues } from '../api/sportsDbApi'
-import type { LeagueSummary } from '../types/sports'
+import { useQuery } from '@tanstack/vue-query'
+import { computed, ref } from 'vue'
+import { leaguesQueryOptions } from '../api/sportsDbQueries'
 import { deriveSportOptions, filterLeagues } from '../utils/filterLeagues'
 
 export function useLeagues() {
-  const leagues = ref<LeagueSummary[]>([])
+  const query = useQuery(leaguesQueryOptions())
+  const leagues = computed(() => query.data.value ?? [])
   const search = ref('')
   const selectedSport = ref('')
-  const isLoading = ref(true)
-  const error = ref<string>()
+  const isLoading = computed(() => query.isPending.value)
+  const error = computed(() => query.error.value?.message)
   const sportOptions = computed(() => deriveSportOptions(leagues.value))
   const filteredLeagues = computed(() =>
     filterLeagues(leagues.value, search.value, selectedSport.value),
   )
+
   async function loadLeagues(): Promise<void> {
-    isLoading.value = true
-    error.value = undefined
-    try {
-      leagues.value = await fetchAllLeagues()
-    } catch (reason) {
-      error.value = reason instanceof Error ? reason.message : 'Unable to load leagues'
-    } finally {
-      isLoading.value = false
-    }
+    await query.refetch()
   }
+
   function clearFilters(): void {
     search.value = ''
     selectedSport.value = ''
   }
-  onMounted(loadLeagues)
+
   return {
     leagues,
     search,

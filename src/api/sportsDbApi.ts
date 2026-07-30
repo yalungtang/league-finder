@@ -7,10 +7,16 @@ import type {
   SeasonsResponse,
 } from '../types/sports'
 import { normalizeLeagueDetails, normalizeLeagueSummary, normalizeSeason } from '../utils/normalize'
-import { cachedRequest } from './sportsDbCache'
 
 const DEFAULT_BASE_URL = 'https://www.thesportsdb.com/api/v1/json'
 const DEFAULT_API_KEY = '3'
+
+export class SportsDbRequestError extends Error {
+  constructor(public readonly status: number) {
+    super(`TheSportsDB request failed (${status})`)
+    this.name = 'SportsDbRequestError'
+  }
+}
 
 function apiUrl(path: string, params?: Record<string, string>): string {
   const baseUrl = (import.meta.env.VITE_SPORTSDB_API_BASE_URL || DEFAULT_BASE_URL).replace(
@@ -25,7 +31,7 @@ function apiUrl(path: string, params?: Record<string, string>): string {
 
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { headers: { Accept: 'application/json' } })
-  if (!response.ok) throw new Error(`TheSportsDB request failed (${response.status})`)
+  if (!response.ok) throw new SportsDbRequestError(response.status)
   return (await response.json()) as T
 }
 
@@ -36,19 +42,15 @@ export async function fetchAllLeagues(): Promise<LeagueSummary[]> {
     .filter((league): league is LeagueSummary => Boolean(league))
 }
 
-export function fetchLeagueDetails(id: string): Promise<LeagueDetails | null> {
-  return cachedRequest(`details:${id}`, async () => {
-    const data = await fetchJson<LeagueDetailsResponse>(apiUrl('lookupleague.php', { id }))
-    const raw = data.leagues?.[0]
-    return raw ? (normalizeLeagueDetails(raw) ?? null) : null
-  })
+export async function fetchLeagueDetails(id: string): Promise<LeagueDetails | null> {
+  const data = await fetchJson<LeagueDetailsResponse>(apiUrl('lookupleague.php', { id }))
+  const raw = data.leagues?.[0]
+  return raw ? (normalizeLeagueDetails(raw) ?? null) : null
 }
 
-export function fetchLeagueSeasons(id: string): Promise<Season[]> {
-  return cachedRequest(`seasons:${id}`, async () => {
-    const data = await fetchJson<SeasonsResponse>(
-      apiUrl('search_all_seasons.php', { badge: '1', id }),
-    )
-    return (data.seasons ?? []).map(normalizeSeason)
-  })
+export async function fetchLeagueSeasons(id: string): Promise<Season[]> {
+  const data = await fetchJson<SeasonsResponse>(
+    apiUrl('search_all_seasons.php', { badge: '1', id }),
+  )
+  return (data.seasons ?? []).map(normalizeSeason)
 }

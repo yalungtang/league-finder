@@ -53,7 +53,9 @@ The centralized native-fetch layer uses `all_leagues.php`, `search_all_seasons.p
 
 ## Caching
 
-A module-level cache is keyed by resource type and league ID. It stores successful values—including `null` and empty arrays—and shares in-flight promises. Rejections are immediately evicted, so retries perform a new request. Cache lifetime is intentionally one application session.
+TanStack Vue Query owns server state with stable keys for the catalogue, league details, and seasons. The catalogue remains fresh for 15 minutes, details for 30 minutes, and seasons for 6 hours. Stale data stays visible while Vue Query refreshes it in the background; concurrent consumers share requests automatically.
+
+Successful normalized responses—including `null` and empty arrays—are persisted to `sessionStorage` for up to 24 hours with a schema-version buster. This allows refreshes and direct detail routes to hydrate immediately without carrying data across browser sessions. Rate limits, server errors, and network failures receive one retry with backoff; other client errors are surfaced immediately. Failed responses are never persisted.
 
 ## Frontend routing
 
@@ -68,7 +70,7 @@ Desktop uses a fixed 520px catalogue sidebar and a fluid detail panel. Mobile op
 - Vue 3 Composition API, `<script setup lang="ts">`, strict TypeScript, Vite, and Tailwind through `@tailwindcss/vite`.
 - Composables own catalogue and selection state; nullable API wire models are normalized before rendering.
 - Neutral initials avoid N+1 detail requests for list artwork.
-- Vue Router owns URL matching and navigation; no store, persistent cache, query library, component framework, or list virtualization is required.
+- Vue Router owns URL matching and navigation, while TanStack Vue Query owns remote server state and session-scoped persistence; no client-state store, component framework, or list virtualization is required.
 - Descriptions are clamped because no secondary reading workflow is in scope.
 
 ## Known API limitations

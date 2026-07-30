@@ -1,68 +1,63 @@
+import { useQuery } from '@tanstack/vue-query'
 import { computed, ref } from 'vue'
 import { fetchLeagueDetails, fetchLeagueSeasons } from '../api/sportsDbApi'
+import {
+  leagueDetailsStaleTime,
+  leagueSeasonsStaleTime,
+  shouldRetrySportsDbRequest,
+  sportsDbCacheMaxAge,
+  sportsDbQueryKeys,
+} from '../api/sportsDbQueries'
 import type { AsyncStatus, LeagueDetails, LeagueSummary, Season } from '../types/sports'
 import { selectSeasonBadge } from '../utils/normalize'
 
 export function useLeagueSelection() {
   const selectedLeague = ref<LeagueSummary>()
-  const details = ref<LeagueDetails | null>(null)
-  const seasons = ref<Season[]>([])
-  const detailsStatus = ref<AsyncStatus>('idle')
-  const seasonsStatus = ref<AsyncStatus>('idle')
-  let version = 0
+  const selectedId = computed(() => selectedLeague.value?.id)
+  const detailsQuery = useQuery<LeagueDetails | null>({
+    queryKey: computed(() => sportsDbQueryKeys.details(selectedId.value ?? 'unselected')),
+    queryFn: () => fetchLeagueDetails(selectedId.value!),
+    enabled: computed(() => Boolean(selectedId.value)),
+    staleTime: leagueDetailsStaleTime,
+    gcTime: sportsDbCacheMaxAge,
+    retry: shouldRetrySportsDbRequest,
+  })
+  const seasonsQuery = useQuery<Season[]>({
+    queryKey: computed(() => sportsDbQueryKeys.seasons(selectedId.value ?? 'unselected')),
+    queryFn: () => fetchLeagueSeasons(selectedId.value!),
+    enabled: computed(() => Boolean(selectedId.value)),
+    staleTime: leagueSeasonsStaleTime,
+    gcTime: sportsDbCacheMaxAge,
+    retry: shouldRetrySportsDbRequest,
+  })
+  const details = computed(() => detailsQuery.data.value ?? null)
+  const seasons = computed(() => seasonsQuery.data.value ?? [])
+  const detailsStatus = computed<AsyncStatus>(() => queryStatus(detailsQuery.status.value))
+  const seasonsStatus = computed<AsyncStatus>(() => queryStatus(seasonsQuery.status.value))
   const seasonBadge = computed(() => selectSeasonBadge(seasons.value, details.value?.currentSeason))
-  async function loadDetails(league: LeagueSummary, token: number) {
-    detailsStatus.value = 'loading'
-    try {
-      const value = await fetchLeagueDetails(league.id)
-      if (token === version) {
-        details.value = value
-        detailsStatus.value = 'success'
-      }
-    } catch {
-      if (token === version) {
-        details.value = null
-        detailsStatus.value = 'error'
-      }
-    }
+
+  function queryStatus(status: 'pending' | 'error' | 'success'): AsyncStatus {
+    if (!selectedLeague.value) return 'idle'
+    if (status === 'pending') return 'loading'
+    return status
   }
-  async function loadSeasons(league: LeagueSummary, token: number) {
-    seasonsStatus.value = 'loading'
-    try {
-      const value = await fetchLeagueSeasons(league.id)
-      if (token === version) {
-        seasons.value = value
-        seasonsStatus.value = 'success'
-      }
-    } catch {
-      if (token === version) {
-        seasons.value = []
-        seasonsStatus.value = 'error'
-      }
-    }
-  }
-  function selectLeague(league: LeagueSummary) {
-    const token = ++version
+
+  function selectLeague(league: LeagueSummary): void {
     selectedLeague.value = league
-    details.value = null
-    seasons.value = []
-    void loadDetails(league, token)
-    void loadSeasons(league, token)
   }
-  function clearSelection() {
-    version += 1
+
+  function clearSelection(): void {
     selectedLeague.value = undefined
-    details.value = null
-    seasons.value = []
-    detailsStatus.value = 'idle'
-    seasonsStatus.value = 'idle'
   }
-  function retryDetails() {
-    if (selectedLeague.value) void loadDetails(selectedLeague.value, version)
+
+  function retryDetails(): void {
+    if (selectedLeague.value) void detailsQuery.refetch()
   }
-  function retrySeasons() {
-    if (selectedLeague.value) void loadSeasons(selectedLeague.value, version)
+
+  function retrySeasons(): void {
+    if (selectedLeague.value) void seasonsQuery.refetch()
   }
+
   return {
     selectedLeague,
     details,
