@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import AppMark from './components/AppMark.vue'
+import DataAttribution from './components/DataAttribution.vue'
 import DetailEmptyState from './components/DetailEmptyState.vue'
 import DetailViewSkeleton from './components/DetailViewSkeleton.vue'
+import DiscoveryIntro from './components/DiscoveryIntro.vue'
 import LeagueDetail from './components/LeagueDetail.vue'
 import LeagueFilters from './components/LeagueFilters.vue'
 import LeagueList from './components/LeagueList.vue'
 import LeagueListSkeleton from './components/LeagueListSkeleton.vue'
+import LeagueLoadError from './components/LeagueLoadError.vue'
 import StateMessage from './components/StateMessage.vue'
 import { useLeagues } from './composables/useLeagues'
 import { useLeagueSelection } from './composables/useLeagueSelection'
@@ -102,36 +104,7 @@ onBeforeUnmount(() => {
     <section
       class="discovery-panel flex h-dvh min-h-0 flex-col overflow-hidden border-white/[0.07] px-4 pb-5 pt-5 sm:px-7 lg:border-r lg:px-8 lg:pt-8 xl:px-10"
     >
-      <AppMark @navigate="navigateToAllLeagues" />
-      <header class="mt-9 lg:mt-10">
-        <h1
-          class="font-display text-[2rem] font-semibold leading-tight tracking-[-0.035em] text-white xl:text-[2.5rem]"
-        >
-          Find the right league.
-        </h1>
-        <p class="mt-2.5 max-w-md text-sm leading-6 text-zinc-500 xl:text-[15px]">
-          Search, filter, and explore competitions from around the world.
-        </p>
-      </header>
-
-      <div
-        class="relative mt-6 h-28 overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0a0c0e] lg:hidden"
-        aria-hidden="true"
-      >
-        <img
-          src="/assets/league-explorer-empty.webp"
-          alt=""
-          class="size-full object-contain object-right-bottom opacity-90"
-        />
-        <div
-          class="absolute inset-0 bg-[linear-gradient(to_right,rgba(7,9,11,0.9),rgba(7,9,11,0.2)_65%,rgba(7,9,11,0.05))]"
-        />
-        <p
-          class="absolute bottom-4 left-4 text-[10px] font-bold uppercase tracking-[0.16em] text-orange-400"
-        >
-          Explore every sport
-        </p>
-      </div>
+      <DiscoveryIntro @navigate="navigateToAllLeagues" />
 
       <div class="mt-6 lg:mt-7">
         <LeagueFilters
@@ -176,30 +149,14 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <p class="mt-6 hidden items-center gap-2 text-[11px] text-zinc-600 lg:flex">
-        <svg
-          viewBox="0 0 24 24"
-          class="size-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 11v6m0-9h.01" />
-        </svg>
-        League data powered by TheSportsDB
-      </p>
+      <DataAttribution />
     </section>
 
     <section class="hidden min-h-0 bg-[#0a0c0e] lg:block" aria-label="League detail">
       <DetailViewSkeleton v-if="isDetailLoading" />
-      <StateMessage
+      <LeagueLoadError
         v-else-if="isDetailRoute && catalogue.error.value"
-        title="We couldn’t load this league."
-        description="Check your connection and try again."
-        action-label="Try again"
-        @action="catalogue.loadLeagues"
+        @retry="catalogue.loadLeagues"
       />
       <LeagueDetail
         v-else-if="selection.selectedLeague.value"
@@ -216,13 +173,7 @@ onBeforeUnmount(() => {
 
     <div v-if="isDetailRoute" class="fixed inset-0 z-50 overflow-y-auto bg-[#090b0d] lg:hidden">
       <DetailViewSkeleton v-if="isDetailLoading" mobile />
-      <StateMessage
-        v-else-if="catalogue.error.value"
-        title="We couldn’t load this league."
-        description="Check your connection and try again."
-        action-label="Try again"
-        @action="catalogue.loadLeagues"
-      />
+      <LeagueLoadError v-else-if="catalogue.error.value" @retry="catalogue.loadLeagues" />
       <LeagueDetail
         v-else-if="selection.selectedLeague.value"
         :league="selection.selectedLeague.value"
