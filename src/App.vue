@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AppMark from './components/AppMark.vue'
 import DetailEmptyState from './components/DetailEmptyState.vue'
 import DetailViewSkeleton from './components/DetailViewSkeleton.vue'
@@ -11,29 +12,26 @@ import StateMessage from './components/StateMessage.vue'
 import { useLeagues } from './composables/useLeagues'
 import { useLeagueSelection } from './composables/useLeagueSelection'
 import type { LeagueSummary } from './types/sports'
-import { cataloguePath, isCataloguePath, leagueIdFromPath, leaguePath } from './utils/leagueRoute'
 
 const catalogue = useLeagues()
 const selection = useLeagueSelection()
+const route = useRoute()
+const router = useRouter()
 const lastSelectedId = ref<string>()
+const routeLeagueId = computed(() =>
+  route.name === 'league' && typeof route.params.id === 'string' ? route.params.id : undefined,
+)
+const isDetailRoute = computed(() => Boolean(routeLeagueId.value))
 const isDetailLoading = computed(
   () =>
-    Boolean(
-      selection.selectedLeague.value &&
-        (selection.detailsStatus.value === 'loading' || selection.seasonsStatus.value === 'loading'),
-    ),
+    isDetailRoute.value &&
+    (catalogue.isLoading.value ||
+      Boolean(
+        selection.selectedLeague.value &&
+        (selection.detailsStatus.value === 'loading' ||
+          selection.seasonsStatus.value === 'loading'),
+      )),
 )
-
-function updateUrl(path: string, mode: 'push' | 'replace'): void {
-  const url = new URL(window.location.href)
-  url.pathname = path
-  url.hash = ''
-  window.history[mode === 'push' ? 'pushState' : 'replaceState'](
-    { leagueFinderView: path === cataloguePath ? 'catalogue' : 'detail' },
-    '',
-    url,
-  )
-}
 
 function showLeague(league: LeagueSummary): void {
   lastSelectedId.value = league.id
@@ -42,9 +40,8 @@ function showLeague(league: LeagueSummary): void {
 }
 
 function selectLeague(league: LeagueSummary): void {
-  if (leagueIdFromPath(window.location.pathname) !== league.id) {
-    updateUrl(leaguePath(league.id), 'push')
-  }
+  if (routeLeagueId.value !== league.id)
+    void router.push({ name: 'league', params: { id: league.id } })
   showLeague(league)
 }
 
@@ -55,18 +52,18 @@ function showCatalogue(): void {
 
 function navigateToAllLeagues(): void {
   catalogue.clearFilters()
-  if (!isCataloguePath(window.location.pathname)) updateUrl(cataloguePath, 'push')
+  if (route.name !== 'catalogue') void router.push({ name: 'catalogue' })
   showCatalogue()
 }
 
 function syncRoute(): void {
-  const routeId = leagueIdFromPath(window.location.pathname)
+  const routeId = routeLeagueId.value
   if (!routeId) {
-    if (!isCataloguePath(window.location.pathname)) updateUrl(cataloguePath, 'replace')
     showCatalogue()
     return
   }
-  if (catalogue.isLoading.value || catalogue.error.value) return
+  if (catalogue.isLoading.value) return
+  if (catalogue.error.value) return
 
   const league = catalogue.leagues.value.find((item) => item.id === routeId)
   if (league) {
@@ -74,41 +71,34 @@ function syncRoute(): void {
     return
   }
 
-  updateUrl(cataloguePath, 'replace')
+  void router.replace({ name: 'catalogue' })
   showCatalogue()
 }
 
 async function closeMobileDetail(): Promise<void> {
-  updateUrl(cataloguePath, 'replace')
+  await router.replace({ name: 'catalogue' })
   showCatalogue()
   await nextTick()
   if (lastSelectedId.value) document.getElementById(`league-row-${lastSelectedId.value}`)?.focus()
 }
 
-watch([catalogue.leagues, catalogue.isLoading], syncRoute, { immediate: true })
+watch([routeLeagueId, catalogue.leagues, catalogue.isLoading], syncRoute, { immediate: true })
 
 watch(catalogue.filteredLeagues, (visible) => {
   const id = selection.selectedLeague.value?.id
   if (id && !visible.some((league) => league.id === id)) {
-    updateUrl(cataloguePath, 'replace')
+    void router.replace({ name: 'catalogue' })
     showCatalogue()
   }
 })
 
-onMounted(() => {
-  window.addEventListener('popstate', syncRoute)
-})
-
 onBeforeUnmount(() => {
   document.body.classList.remove('detail-open')
-  window.removeEventListener('popstate', syncRoute)
 })
 </script>
 
 <template>
-  <main
-    class="app-shell h-dvh overflow-hidden lg:grid lg:grid-cols-[520px_minmax(0,1fr)]"
-  >
+  <main class="app-shell h-dvh overflow-hidden lg:grid lg:grid-cols-[520px_minmax(0,1fr)]">
     <section
       class="discovery-panel flex h-dvh min-h-0 flex-col overflow-hidden border-white/[0.07] px-4 pb-5 pt-5 sm:px-7 lg:border-r lg:px-8 lg:pt-8 xl:px-10"
     >
@@ -204,6 +194,13 @@ onBeforeUnmount(() => {
 
     <section class="hidden min-h-0 bg-[#0a0c0e] lg:block" aria-label="League detail">
       <DetailViewSkeleton v-if="isDetailLoading" />
+      <StateMessage
+        v-else-if="isDetailRoute && catalogue.error.value"
+        title="We couldn’t load this league."
+        description="Check your connection and try again."
+        action-label="Try again"
+        @action="catalogue.loadLeagues"
+      />
       <LeagueDetail
         v-else-if="selection.selectedLeague.value"
         :league="selection.selectedLeague.value"
@@ -217,13 +214,17 @@ onBeforeUnmount(() => {
       <DetailEmptyState v-else />
     </section>
 
-    <div
-      v-if="selection.selectedLeague.value"
-      class="fixed inset-0 z-50 overflow-y-auto bg-[#090b0d] lg:hidden"
-    >
+    <div v-if="isDetailRoute" class="fixed inset-0 z-50 overflow-y-auto bg-[#090b0d] lg:hidden">
       <DetailViewSkeleton v-if="isDetailLoading" mobile />
+      <StateMessage
+        v-else-if="catalogue.error.value"
+        title="We couldn’t load this league."
+        description="Check your connection and try again."
+        action-label="Try again"
+        @action="catalogue.loadLeagues"
+      />
       <LeagueDetail
-        v-else
+        v-else-if="selection.selectedLeague.value"
         :league="selection.selectedLeague.value"
         :details="selection.details.value"
         :details-status="selection.detailsStatus.value"

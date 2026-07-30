@@ -57,7 +57,7 @@ A module-level cache is keyed by resource type and league ID. It stores successf
 
 ## Frontend routing
 
-The catalogue uses `/` and selected leagues use `/leagues/<idLeague>`. Browser-native History API routing provides clean URLs without a router dependency. Restoring a route waits for the catalogue and then uses the normal cached selection flow. Production hosting must rewrite unknown frontend routes to `index.html`; Vite development and preview already provide this SPA fallback.
+The catalogue uses `/` and selected leagues use `/leagues/<idLeague>`. Vue Router provides clean URLs, dynamic league parameters, history navigation, and initial-navigation readiness. A direct detail visit renders its skeleton from the route state while the catalogue resolves, then uses the normal cached selection flow. Production hosting must rewrite unknown frontend routes to `index.html`; Vite development and preview already provide this SPA fallback.
 
 ## Responsive and accessible behavior
 
@@ -68,7 +68,7 @@ Desktop uses a fixed 520px catalogue sidebar and a fluid detail panel. Mobile op
 - Vue 3 Composition API, `<script setup lang="ts">`, strict TypeScript, Vite, and Tailwind through `@tailwindcss/vite`.
 - Composables own catalogue and selection state; nullable API wire models are normalized before rendering.
 - Neutral initials avoid N+1 detail requests for list artwork.
-- Lightweight History API routing is implemented with browser APIs; no router package, store, persistent cache, query library, component framework, or list virtualization is required.
+- Vue Router owns URL matching and navigation; no store, persistent cache, query library, component framework, or list virtualization is required.
 - Descriptions are clamped because no secondary reading workflow is in scope.
 
 ## Known API limitations
