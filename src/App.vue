@@ -86,14 +86,6 @@ async function closeMobileDetail(): Promise<void> {
 
 watch([routeLeagueId, catalogue.leagues, catalogue.isLoading], syncRoute, { immediate: true })
 
-watch(catalogue.filteredLeagues, (visible) => {
-  const id = selection.selectedLeague.value?.id
-  if (id && !visible.some((league) => league.id === id)) {
-    void router.replace({ name: 'catalogue' })
-    showCatalogue()
-  }
-})
-
 onBeforeUnmount(() => {
   document.body.classList.remove('detail-open')
 })
