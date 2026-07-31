@@ -25,7 +25,7 @@ const emit = defineEmits<{ navigate: [] }>()
     <img
       src="/assets/league-explorer-empty.webp"
       alt=""
-      class="size-full object-contain object-right-bottom opacity-90"
+      class="mobile-banner-image size-full object-contain object-right-bottom opacity-90"
     />
     <div
       class="absolute inset-0 bg-[linear-gradient(to_right,rgba(7,9,11,0.9),rgba(7,9,11,0.2)_65%,rgba(7,9,11,0.05))]"

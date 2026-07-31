@@ -92,9 +92,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="app-shell h-dvh overflow-hidden lg:grid lg:grid-cols-[520px_minmax(0,1fr)]">
+  <main
+    class="app-shell min-h-dvh lg:grid lg:h-dvh lg:grid-cols-[520px_minmax(0,1fr)] lg:overflow-hidden"
+  >
     <section
-      class="discovery-panel flex h-dvh min-h-0 flex-col overflow-hidden border-white/[0.07] px-4 pb-5 pt-5 sm:px-7 lg:border-r lg:px-8 lg:pt-8 xl:px-10"
+      class="discovery-panel flex min-h-dvh flex-col border-white/[0.07] px-4 pb-5 pt-5 sm:px-7 lg:h-dvh lg:min-h-0 lg:overflow-hidden lg:border-r lg:px-8 lg:pt-8 xl:px-10"
     >
       <DiscoveryIntro @navigate="navigateToAllLeagues" />
 
@@ -117,7 +119,9 @@ onBeforeUnmount(() => {
         {{ catalogue.filteredLeagues.value.length === 1 ? 'league' : 'leagues' }} found
       </p>
 
-      <div class="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1.5 lg:mt-0">
+      <div
+        class="mt-5 pr-1.5 lg:mt-0 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain"
+      >
         <LeagueListSkeleton v-if="catalogue.isLoading.value" />
         <StateMessage
           v-else-if="catalogue.error.value"
